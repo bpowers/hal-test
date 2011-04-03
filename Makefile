@@ -18,7 +18,8 @@ CFLAGS += -m32 -std=gnu99 $(WARNFLAGS) -I.
 SRC := haltest.c
 OBJS := $(patsubst %.c,%.o,$(filter %.c,$(SRC)))
 
-LDFLAGS += /lib/libdbus-1.so.3 /usr/lib/libhal.so.1 -Wl,--no-add-needed
+LIBS := /lib/libdbus-1.so.3 /usr/lib/libhal.so.1
+LDFLAGS += -m32 -Wl,--no-add-needed
 
 TARGETS := haltest
 
@@ -27,25 +28,17 @@ all: $(TARGETS)
 # link the program
 haltest: $(OBJS)
 	@echo "  LD    $@"
-	$(CC) -o $@ $^ $(LIBS) $(CFLAGS) $(LDFLAGS)
+	$(CC) -o $@ $^ $(LIBS) $(LDFLAGS)
 
 # clear out all suffixes
 .SUFFIXES:
 # list only those we use
-.SUFFIXES: .d .c .o .proto .pb-c.c
+.SUFFIXES: .c .o .proto .pb-c.c
 
-# calculate C include
-%.d: %.c
-	@echo "  DEPS  $@"
-	support/depend.sh `dirname $*.c` $(CFLAGS) $*.c > $@
 
 %.o: %.c
 	@echo "  CC    $@"
 	$(CC) $(CFLAGS) -c -o $@ $<
-
-# include the C include dependencies
--include $(OBJS:.o=.d)
-
 
 clean:
 	find . -name "*.o" | xargs rm -f
