@@ -13,7 +13,7 @@ WARNFLAGS := \
 # clang doesn't know about this yet
 #        -Wunsafe-loop-optimizations
 
-CFLAGS += -m32 -std=gnu99 $(WARNFLAGS)
+CFLAGS += -m32 -std=gnu99 $(WARNFLAGS) -g -O0
 CFLAGS += $(shell pkg-config --cflags dbus-1)
 CFLAGS += $(shell pkg-config --cflags hal)
 
