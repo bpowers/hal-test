@@ -4,63 +4,49 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <string.h>
 
-
-/*
-libhal_ctx_init
-libhal_ctx_new
-libhal_ctx_set_dbus_connection
-libhal_device_get_property_string
-libhal_device_property_exists
-libhal_find_device_by_capability
-libhal_free_string
-libhal_free_string_array
-
-<[^_]
- [^]
- [^]
- [^]
- [^]
-,[^_]
-[^_]
-[^_]
-[^_]
-
-
-dbus_bus_get
-dbus_error_init
-
-error: libhal_ctx_init: %s: %s
-error: libhal_ctx_new
-error: libhal_ctx_set_dbus_connection: %s: %s
-
-
-info.product
-
- MAC 
-block
-block.device
-block.storage_device
-net.80203
-net.address
-/org/freedesktop/Hal/devices/computer
-processor
-smbios.bios.release_date
-smbios.bios.version
-storage.model
-
-setfsent
-getfsent
-endfsent
-*/
-
+#include <fstab.h>
 
 char *
-get_prop(LibHalContext *ctx, const char *cap, const char *prop)
+get_prop(LibHalContext *ctx, const char *udi, const char *prop)
+{
+	DBusError derr;
+	char *value;
+	char *ret;
+
+	value = NULL;
+	dbus_error_init(&derr);
+
+	if (!libhal_device_property_exists(ctx, udi, prop, &derr)) {
+		fprintf(stderr, "device %s doesn't have property '%s'\n",
+			udi, prop);
+		return NULL;
+	}
+
+	value = libhal_device_get_property_string(ctx, udi, prop, &derr);
+	if (dbus_error_is_set(&derr)) {
+		fprintf(stderr, "get_property_string: an error occurred: %s\n",
+			derr.message);
+		dbus_error_free(&derr);
+		if (value)
+			libhal_free_string(value);
+		return NULL;
+	}
+
+	ret = strdup(value);
+	libhal_free_string(value);
+
+	return ret;
+}
+
+char *
+get_prop_for_cap(LibHalContext *ctx, const char *cap, const char *prop)
 {
 	DBusError derr;
 	int num;
 	char **devs;
+	char *value;
 
 	devs = NULL;
 
@@ -73,31 +59,13 @@ get_prop(LibHalContext *ctx, const char *cap, const char *prop)
 	}
 
 	for (int i = 0; i < num; ++i) {
-		char *udi;
-		char *value;
+		value = get_prop(ctx, devs[i], prop);
+		fprintf(stdout, "%s (%s) %s: %s\n", cap, devs[i], prop, value);
+		free(value);
+	}
 
-		udi = devs[i];
-		value = NULL;
-
-		if (!libhal_device_property_exists(ctx, udi, prop, &derr)) {
-			fprintf(stderr, "device %s doesn't have property '%s'\n",
-				udi, prop);
-			continue;
-		}
-
-		value = libhal_device_get_property_string(ctx, udi, prop, &derr);
-		if (dbus_error_is_set(&derr)) {
-			fprintf(stderr, "get_property_string: an error occurred: %s\n",
-				derr.message);
-			dbus_error_free(&derr);
-			if (value)
-				libhal_free_string(value);
-			goto error;
-		}
-
-		fprintf(stdout, "%s (%s) %s: %s\n", cap, udi, prop, value);
-
-		libhal_free_string(value);
+	if (num == 0) {
+		fprintf(stderr, "no devs found for '%s'\n", cap);
 	}
 
 error:
@@ -141,19 +109,33 @@ main(int argc, char *argv[])
 		return 1;
 	}
 
-	get_prop(ctx, "net.80203", "info.product");
-	get_prop(ctx, "block", "info.product");
-	get_prop(ctx, "processor", "info.product");
 
-	//libhal_find_device_by_capability(); // net.80203
-	//libhal_find_device_by_capability(); // block
-	//libhal_find_device_by_capability(); // processor
+        /*
+	  interesting strings from the anylogic 32-bit JNI license lib:
 
-	//if (libhal_device_property_exists()) { // info.product
-	//	libhal_device_get_property();
+          info.product
+          MAC
+          block
+          block.device
+          block.storage_device
+          net.80203
+          net.address
+          /org/freedesktop/Hal/devices/computer
+          processor
+          smbios.bios.release_date
+          smbios.bios.version
+          storage.model
+        */
 
-	//	libhal_free_string();
-	//}
+	get_prop_for_cap(ctx, "net.80203", "info.product");
+	get_prop_for_cap(ctx, "net.80203", "MAC");
+	get_prop_for_cap(ctx, "block", "storage.model");
+	get_prop_for_cap(ctx, "block.device", "storage.model");
+	get_prop_for_cap(ctx, "block.storage_device", "storage.model");
+	get_prop_for_cap(ctx, "processor", "info.product");
+
+	get_prop(ctx, "/org/freedesktop/Hal/devices/computer", "smbios.bios.release_date");
+	get_prop(ctx, "/org/freedesktop/Hal/devices/computer", "smbios.bios.version");
 
 	return 0;
 }
