@@ -6,9 +6,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include <fstab.h>
-
-char *
+static char *
 get_prop(LibHalContext *ctx, const char *udi, const char *prop)
 {
 	DBusError derr;
@@ -40,8 +38,8 @@ get_prop(LibHalContext *ctx, const char *udi, const char *prop)
 	return ret;
 }
 
-char *
-get_prop_for_cap(LibHalContext *ctx, const char *cap, const char *prop)
+static char *
+print_props_for_cap(LibHalContext *ctx, const char *cap, const char *prop)
 {
 	DBusError derr;
 	int num;
@@ -81,6 +79,7 @@ main(int argc, char *argv[])
 	DBusError derr;
 	DBusConnection *conn;
 	LibHalContext *ctx;
+	char *bios_date, *bios_ver;
 
 	dbus_error_init(&derr);
 
@@ -109,32 +108,37 @@ main(int argc, char *argv[])
 		return 1;
 	}
 
-        /*
-	  interesting strings from the anylogic 32-bit JNI license lib:
+	// check a number of interesting properties
+	print_props_for_cap(ctx, "net.80203", "info.product");
+	print_props_for_cap(ctx, "net.80203", "MAC");
+	print_props_for_cap(ctx, "block", "storage.model");
+	print_props_for_cap(ctx, "block.device", "storage.model");
+	print_props_for_cap(ctx, "block.storage_device", "storage.model");
+	print_props_for_cap(ctx, "processor", "info.product");
 
-          info.product
-          MAC
-          block
-          block.device
-          block.storage_device
-          net.80203
-          net.address
-          /org/freedesktop/Hal/devices/computer
-          processor
-          smbios.bios.release_date
-          smbios.bios.version
-          storage.model
-        */
+	bios_date = get_prop(ctx, "/org/freedesktop/Hal/devices/computer", "smbios.bios.release_date");
+	if (bios_date) {
+		fprintf(stdout, "bios release date: %s\n", bios_date);
+		free(bios_date);
+		bios_date = NULL;
+	}
+	bios_ver = get_prop(ctx, "/org/freedesktop/Hal/devices/computer", "smbios.bios.version");
+	if (bios_ver) {
+		fprintf(stdout, "bios version: %s\n", bios_ver);
+		free(bios_ver);
+		bios_ver = NULL;
+	}
 
-	get_prop_for_cap(ctx, "net.80203", "info.product");
-	get_prop_for_cap(ctx, "net.80203", "MAC");
-	get_prop_for_cap(ctx, "block", "storage.model");
-	get_prop_for_cap(ctx, "block.device", "storage.model");
-	get_prop_for_cap(ctx, "block.storage_device", "storage.model");
-	get_prop_for_cap(ctx, "processor", "info.product");
+	// begin shutdown
+	libhal_ctx_shutdown(ctx, &derr);
+	if (dbus_error_is_set(&derr)) {
+		fprintf(stderr, "ctx_shutdown: an error occurred: %s\n", derr.message);
+		dbus_error_free(&derr);
+		return 1;
+	}
 
-	get_prop(ctx, "/org/freedesktop/Hal/devices/computer", "smbios.bios.release_date");
-	get_prop(ctx, "/org/freedesktop/Hal/devices/computer", "smbios.bios.version");
+	dbus_connection_unref(conn);
+	libhal_ctx_free(ctx);
 
 	return 0;
 }
