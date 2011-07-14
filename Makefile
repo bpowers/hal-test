@@ -4,7 +4,7 @@ ifneq ($V, 1)
 MAKEFLAGS = -s
 endif
 
-CC=clang
+#CC=clang
 
 WARNFLAGS := \
         -Wformat -Wall -Wundef -Wpointer-arith -Wcast-qual \
@@ -13,15 +13,17 @@ WARNFLAGS := \
 # clang doesn't know about this yet
 #        -Wunsafe-loop-optimizations
 
-CFLAGS += -m32 -std=gnu99 $(WARNFLAGS) -g -O0
+CFLAGS += -std=gnu99 $(WARNFLAGS) -g -O0
 CFLAGS += $(shell pkg-config --cflags dbus-1)
 CFLAGS += $(shell pkg-config --cflags hal)
 
 SRC := haltest.c
 OBJS := $(patsubst %.c,%.o,$(filter %.c,$(SRC)))
 
-LIBS := /lib/libdbus-1.so.3 /usr/lib/libhal.so.1
-LDFLAGS += -m32 -Wl,--no-add-needed
+LIBS := #/lib/libdbus-1.so.3 /usr/lib/libhal.so.1
+LIBS += $(shell pkg-config --libs dbus-1)
+LIBS += $(shell pkg-config --libs hal)
+LDFLAGS += -Wl,--no-add-needed
 
 TARGETS := haltest
 

@@ -109,7 +109,6 @@ main(int argc, char *argv[])
 		return 1;
 	}
 
-
         /*
 	  interesting strings from the anylogic 32-bit JNI license lib:
 
