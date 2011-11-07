@@ -1,0 +1,3 @@
+a small example to figure out how HAL works, and how some code that
+used HAL was working (and how error checking around HAL codes should
+be structured)
