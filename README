@@ -1,3 +1,6 @@
 a small example to figure out how HAL works, and how some code that
 used HAL was working (and how error checking around HAL codes should
 be structured)
+
+NOTE: Fedora 16 has dropped HAL completely, so this won't work anymore
+at least in Fedora, but soon in probably other distros.
